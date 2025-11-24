@@ -5,130 +5,132 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 extern char **environ;
 
 int is_allowed_program(const char *cmd) {
-        const char *allowed_spawn[] = {
-                "cp", "touch", "mkdir", "ls", "pwd", "cat", "grep", "chmod", "diff", NULL
-        };
-        for (int i = 0; allowed_spawn[i] != NULL; ++i) {
-                if (strcmp(cmd, allowed_spawn[i] == 0) return 1;
-        }
-        return 0;
+    const char *allowed_spawn[] = {
+        "cp", "touch", "mkdir", "ls", "pwd", "cat",
+        "grep", "chmod", "diff", NULL
+    };
+    for (int i = 0; allowed_spawn[i] != NULL; ++i) {
+        if (strcmp(cmd, allowed_spawn[i]) == 0)
+            return 1;
+    }
+    return 0;
 }
 
 int is_builtin(const char *cmd) {
-        const char *builtins[] = {"cd, "exit", "help", NULL};
-        for (int i = 0; builtins[i] != NULL; ++i) {
-                if (strcmp(cmd, builtins[i]) == 0) return 1;
-        }
-        return 0;
+    const char *builtins[] = {"cd", "exit", "help", NULL};
+    for (int i = 0; builtins[i] != NULL; ++i) {
+        if (strcmp(cmd, builtins[i]) == 0)
+            return 1;
+    }
+    return 0;
 }
 
 void print_help(void) {
-	    printf("The allowed commands are:\n");
-        printf("cp\n");
-        printf("touch\n");
-        printf("mkdir\n");
-        printf("ls\n");
-        printf("pwd\n");
-        printf("cat\n");
-        printf("grep\n");
-        printf("chmod\n");
-        printf("diff\n");
-        printf("cd\n");
-        printf("exit\n");
-        printf("help\n");
-        fflush(stdout);
+    printf("The allowed commands are:\n");
+    printf("cp\n");
+    printf("touch\n");
+    printf("mkdir\n");
+    printf("ls\n");
+    printf("pwd\n");
+    printf("cat\n");
+    printf("grep\n");
+    printf("chmod\n");
+    printf("diff\n");
+    printf("cd\n");
+    printf("exit\n");
+    printf("help\n");
+    fflush(stdout);
 }
 
 int main(void) {
-        const size_t LINE_MAX = 4096;
-        char line[LINE_MAX];
+    const size_t LINE_MAX = 4096;
+    char line[LINE_MAX];
 
-        while (1) {
-                /* printing prompt to stderr */
-                fprint(stdeer, "rsh> ");
-                fflush(stderr);
+    while (1) {
+        /* printing prompt to stderr */
+        fprintf(stderr, "rsh> ");
+        fflush(stderr);
 
-                if (fgets(line, sizeof(line), stdin) == NULL) {
-                        return 0;
-                }
- 				/*tokenize input*/
-                char *saveptr;
-                char *tok;
-                const char *delim = " \t\n";
-                char *argv[21];
-                int argc = 0;
+        if (fgets(line, sizeof(line), stdin) == NULL)
+            return 0;
 
-                tok = strtok_r(line, delim, &saveptr);
-                while (tok != NULL && argc < 20) {
-                        argv[argc++] = strdup(tok);
-                        tok = strtok_r(NULL, delim, &saveptr);
-                }
+        /* tokenize input */
+        char *saveptr;
+        const char *delim = " \t\n";
+        char *argv[21];
+        int argc = 0;
 
-                if (argc == 0) {
-                        continue;
-                }
-                argv[argc] = NULL;
+        char *tok = strtok_r(line, delim, &saveptr);
+        while (tok != NULL && argc < 20) {
+            argv[argc++] = strdup(tok);
+            tok = strtok_r(NULL, delim, &saveptr);
+        }
+        argv[argc] = NULL;
 
-                char *cmd = argv[0];
+        if (argc == 0)
+            continue;
 
-                if (strcmp(cmd, "exit") == 0) {
-                        for (int i = 0; i < argc; ++i) free(argv[i]);
-                        return 0;
-                } else if (strcmp(cmd, "help") == 0) {
-                        print_help();
-                        for (int i = 0; i <argc; ++i) free(argv[i]);
-                        continue;
-                } else if (strcmp(cmd, "cd") == 0) {
-                        if (argc > 2) {
- 								printf("-rsh: cd: too many arguments\n");
-                                fflush(stdout);
-                        } else if (argc == 1) {
-                                /*cd with no args goes to home*/
-                                const char *home = getenv("HOME");
-                                if (home != NULL) {
-                                        if (chdir(home) != 0) {
-                                                printf("-rsh: cd: %s: %s\n", home, strerror(errno));
-                                                fflush(stdout);
-                                        }
-                                } else { /* literally nothing*/ }
-                        } else {
-                                if (chdir(argv[1]) != 0) {
-                                        printf("-rsh: cd: %s: %s\n", argv[1], strerror(errno));
-                                        fflush(stdout);
-                                }
-                        }
-                        for (int i = 0; i < argc; ++i) free(argv[i]);
-                        continue;
-                }
+        char *cmd = argv[0];
 
-                if (!is_allowed_program(cmd)) {
-                        printf("NOT ALLOWED!\n");
+        /* builtins */
+        if (strcmp(cmd, "exit") == 0) {
+            for (int i = 0; i < argc; ++i) free(argv[i]);
+            return 0;
+        } else if (strcmp(cmd, "help") == 0) {
+            print_help();
+            for (int i = 0; i < argc; ++i) free(argv[i]);
+            continue;
+        } else if (strcmp(cmd, "cd") == 0) {
+            if (argc > 2) {
+                printf("-rsh: cd: too many arguments\n");
+                fflush(stdout);
+            } else if (argc == 1) {
+                const char *home = getenv("HOME");
+                if (home != NULL) {
+                    if (chdir(home) != 0) {
+                        printf("-rsh: cd: %s: %s\n", home, strerror(errno));
                         fflush(stdout);
-                        for (int i = 0; i < argc; ++i) free(argv[i]);
-                        continue;
+                    }
                 }
-				/* prepare argv for posix_spawnp since it expects char *const argv[] */
-                pid_t child;
-                int spawn_err = posix_spawnp(&child, cmd, NULL, NULL, (char * const *)argv, environ);
-                if (spawn_err != 0) {
-                        printf("NOT ALLOWED!\n");
-                        fflush(stdout);
-                        for (int i = 0; i < argc; ++i) free(argv[i]);
-                        continue;
+            } else {
+                if (chdir(argv[1]) != 0) {
+                    printf("-rsh: cd: %s: %s\n", argv[1], strerror(errno));
+                    fflush(stdout);
                 }
-
-                /* wait for child to finish */
-                int status;
-                if (waitpid(child, &status, 0) == -1) {
-
-                }
-
-                for (int i = 0; i < argc; ++i) free(argv[i]);
+            }
+            for (int i = 0; i < argc; ++i) free(argv[i]);
+            continue;
         }
 
-        return 0;
+        /* allowed external commands */
+        if (!is_allowed_program(cmd)) {
+            printf("NOT ALLOWED!\n");
+            fflush(stdout);
+            for (int i = 0; i < argc; ++i) free(argv[i]);
+            continue;
+        }
+
+        /* spawn child */
+        pid_t child;
+        int spawn_err = posix_spawnp(&child, cmd, NULL, NULL, argv, environ);
+        if (spawn_err != 0) {
+            printf("NOT ALLOWED!\n");
+            fflush(stdout);
+            for (int i = 0; i < argc; ++i) free(argv[i]);
+            continue;
+        }
+
+        /* wait for child */
+        int status;
+        waitpid(child, &status, 0);
+
+        for (int i = 0; i < argc; ++i) free(argv[i]);
+    }
+
+    return 0;
 }

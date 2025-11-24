@@ -32,18 +32,18 @@ int is_builtin(const char *cmd) {
 
 void print_help(void) {
     printf("The allowed commands are:\n");
-    printf("cp\n");
-    printf("touch\n");
-    printf("mkdir\n");
-    printf("ls\n");
-    printf("pwd\n");
-    printf("cat\n");
-    printf("grep\n");
-    printf("chmod\n");
-    printf("diff\n");
-    printf("cd\n");
-    printf("exit\n");
-    printf("help\n");
+    printf("1: cp\n");
+    printf("2: touch\n");
+    printf("3: mkdir\n");
+    printf("4: ls\n");
+    printf("5: pwd\n");
+    printf("6: cat\n");
+    printf("7: grep\n");
+    printf("8: chmod\n");
+    printf("9: diff\n");
+    printf("10: cd\n");
+    printf("11: exit\n");
+    printf("12: help\n");
     fflush(stdout);
 }
 
